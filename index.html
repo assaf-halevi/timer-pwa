@@ -127,7 +127,7 @@
 <body>
   <main class="app">
     <div id="status" class="status">מתחיל עכשיו</div>
-    <button id="saveDefaultBtn" class="install" style="display:none;">שמירה כברירת מחדל</button>
+    <button id="saveDefaultBtn" class="install" style="display:none;"></button>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
@@ -358,6 +358,7 @@
     }
 
     updateDisplay();
+    updateSaveButtonLabel();
     window.addEventListener('load', () => startTimer(true));
   </script>
 </body>
