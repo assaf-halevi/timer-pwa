@@ -111,7 +111,6 @@
 </head>
 <body>
   <main class="app">
-    <h1>טיימר פשוט</h1>
     <div id="status" class="status">מתחיל עכשיו</div>
     <div id="timer" class="timer">05:00</div>
 
@@ -196,7 +195,7 @@
       clearInterval(intervalId);
       remainingSeconds = selectedSeconds;
       updateDisplay();
-      statusEl.textContent = 'הטיימר רץ';
+      statusEl.textContent = '';
 
       if (playSound) playGling('start');
 
