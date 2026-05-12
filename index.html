@@ -196,7 +196,7 @@
       clearInterval(intervalId);
       remainingSeconds = selectedSeconds;
       updateDisplay();
-      statusEl.textContent = 'הטיימר רץ';
+      statusEl.textContent = '';
 
       if (playSound) playGling('start');
 
@@ -225,14 +225,25 @@
       }, 1000);
     }
 
-    plusBtn.addEventListener('click', () => {
-      selectedSeconds += STEP_SECONDS;
-      startTimer(true);
+    plusBtn.addEventListener("click", () => {
+        remainingSeconds += 30;
+    
+        const original = playStartSound;
+        playStartSound = () => {};
+    
+        startTimer();
+    
+        playStartSound = original;
     });
-
-    minusBtn.addEventListener('click', () => {
-      selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
-      startTimer(true);
+    minusBtn.addEventListener("click", () => {
+        remainingSeconds = Math.max(30, remainingSeconds - 30);
+    
+        const original = playStartSound;
+        playStartSound = () => {};
+    
+        startTimer();
+    
+        playStartSound = original;
     });
 
     closeBtn.addEventListener('click', () => {
