@@ -1,86 +1,276 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>טיימר פשוט ונחמד</title>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <title>טיימר 5 דקות</title>
   <link rel="manifest" href="manifest.json" />
-
-  <meta name="theme-color" content="#222222" />
-
+  <link rel="apple-touch-icon" href="icon-192.png" />
   <style>
+    :root {
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --button: #374151;
+      --button-active: #4b5563;
+      --accent: #22c55e;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      background: #222;
-      color: white;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937, var(--bg));
+      color: var(--text);
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      padding: 24px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .container {
+    .app {
+      width: min(430px, 100%);
+      background: rgba(31, 41, 55, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
       text-align: center;
-      width: 90%;
-      max-width: 400px;
     }
 
     h1 {
-      margin-bottom: 30px;
-      font-size: 32px;
+      margin: 0 0 10px;
+      font-size: 24px;
+      font-weight: 700;
     }
 
-    #timer {
-      font-size: 72px;
-      margin-bottom: 30px;
-      font-weight: bold;
+    .status {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 24px;
+      min-height: 22px;
     }
 
-    .buttons {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 20px;
+    .timer {
+      font-size: clamp(64px, 18vw, 92px);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin: 20px 0 28px;
+      direction: ltr;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
     }
 
     button {
-      font-size: 22px;
-      padding: 15px 20px;
-      border: none;
-      border-radius: 12px;
+      border: 0;
+      border-radius: 18px;
+      padding: 18px 14px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      background: var(--button);
       cursor: pointer;
     }
 
-    .close-btn {
+    button:active { background: var(--button-active); transform: scale(0.99); }
+
+    .close {
       width: 100%;
-      background: #ff4d4d;
-      color: white;
-      font-size: 20px;
+      background: rgba(239, 68, 68, 0.92);
+      margin-top: 8px;
+    }
+
+    .install {
+      width: 100%;
+      background: var(--accent);
+      color: #052e16;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .hint {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
     }
   </style>
 </head>
-
 <body>
+  <main class="app">
+    <h1>טיימר פשוט</h1>
+    <div id="status" class="status">מתחיל עכשיו</div>
+    <div id="timer" class="timer">05:00</div>
 
-  <div class="container">
-    <h1>טיימר פשוט ונחמד</h1>
-
-    <div id="timer">05:00</div>
-
-    <div class="buttons">
-      <button id="minusBtn">-30</button>
-      <button id="plusBtn">+30</button>
+    <div class="controls">
+      <button id="minusBtn">− 30 שנ׳</button>
+      <button id="plusBtn">+ 30 שנ׳</button>
     </div>
 
-    <button class="close-btn" id="closeBtn">
-      סגור
-    </button>
-  </div>
+    <button id="closeBtn" class="close">סגור עכשיו</button>
+    <button id="installBtn" class="install">התקן כאפליקציה</button>
 
-  <script src="script.js"></script>
+    <div class="hint">
+      אין Pause. שינוי הזמן מפעיל את הטיימר מחדש לפי הזמן החדש.
+    </div>
+  </main>
 
+  <script>
+    const DEFAULT_SECONDS = 5 * 60;
+    const STEP_SECONDS = 30;
+    const MIN_SECONDS = 30;
+
+    let selectedSeconds = DEFAULT_SECONDS;
+    let remainingSeconds = DEFAULT_SECONDS;
+    let intervalId = null;
+    let audioContext = null;
+    let deferredInstallPrompt = null;
+
+    const timerEl = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const minusBtn = document.getElementById('minusBtn');
+    const plusBtn = document.getElementById('plusBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const installBtn = document.getElementById('installBtn');
+
+    function formatTime(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function updateDisplay() {
+      timerEl.textContent = formatTime(remainingSeconds);
+    }
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioContext;
+    }
+
+    function playGling(type = 'start') {
+      try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const now = ctx.currentTime;
+        const gain = ctx.createGain();
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+        const notes = type === 'end'
+          ? [880, 1174, 1568]
+          : [784, 1046];
+
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.11);
+          osc.connect(gain);
+          osc.start(now + i * 0.11);
+          osc.stop(now + i * 0.11 + 0.26);
+        });
+      } catch (e) {
+        // Some browsers block sound before user interaction. The timer still works.
+      }
+    }
+
+    function startTimer(playSound = true) {
+      clearInterval(intervalId);
+      remainingSeconds = selectedSeconds;
+      updateDisplay();
+      statusEl.textContent = 'הטיימר רץ';
+
+      if (playSound) playGling('start');
+
+      intervalId = setInterval(() => {
+        remainingSeconds -= 1;
+        updateDisplay();
+
+        if (remainingSeconds <= 0) {
+          clearInterval(intervalId);
+          statusEl.textContent = 'נגמר';
+          playGling('end');
+
+          setTimeout(() => {
+            try {
+              window.close();
+            } catch (e) {}
+
+            document.body.innerHTML = `
+              <main class="app">
+                <h1>הטיימר הסתיים</h1>
+                <div class="status">אפשר לסגור את החלון.</div>
+              </main>
+            `;
+          }, 900);
+        }
+      }, 1000);
+    }
+
+    plusBtn.addEventListener('click', () => {
+      selectedSeconds += STEP_SECONDS;
+      startTimer(true);
+    });
+
+    minusBtn.addEventListener('click', () => {
+      selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
+      startTimer(true);
+    });
+
+    closeBtn.addEventListener('click', () => {
+      clearInterval(intervalId);
+      try {
+        window.close();
+      } catch (e) {}
+
+      document.body.innerHTML = `
+        <main class="app">
+          <h1>נסגר</h1>
+          <div class="status">אפשר לסגור את החלון.</div>
+        </main>
+      `;
+    });
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice;
+      deferredInstallPrompt = null;
+      installBtn.style.display = 'none';
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+
+    updateDisplay();
+    window.addEventListener('load', () => startTimer(true));
+  </script>
 </body>
 </html>

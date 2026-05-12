@@ -1,7 +1,7 @@
 {
-  "name": "טיימר פשוט ונחמד",
+  "name": "טיימר 5 דקות",
   "short_name": "טיימר",
-  "description": "טיימר פשוט ונחמד שמתחיל מיד, מצלצל בסיום ונסגר.",
+  "description": "טיימר פשוט שמתחיל מיד, מצלצל בסיום ונסגר.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

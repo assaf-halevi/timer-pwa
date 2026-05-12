@@ -1,4 +1,4 @@
-const CACHE_NAME = 'simple-timer-v2';
+const CACHE_NAME = 'simple-timer-v1';
 const FILES_TO_CACHE = [
   './',
   './index.html',
