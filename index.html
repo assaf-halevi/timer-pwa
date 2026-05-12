@@ -168,6 +168,7 @@
     let intervalId = null;
     let audioContext = null;
     let deferredInstallPrompt = null;
+    let timerEnded = false;
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
@@ -187,8 +188,16 @@
       timerEl.textContent = formatTime(remainingSeconds);
     }
 
+    function updateSaveButtonLabel() {
+      saveDefaultBtn.textContent = `קבע ${formatTime(selectedSeconds)} כברירת מחדל`;
+    }
+
     function updateSaveButtonVisibility() {
-      saveDefaultBtn.style.display = selectedSeconds === defaultSeconds ? 'none' : 'block';
+      const show = selectedSeconds !== defaultSeconds;
+      saveDefaultBtn.style.display = show ? 'block' : 'none';
+      if (show) {
+        updateSaveButtonLabel();
+      }
     }
 
     function getAudioContext() {
@@ -239,6 +248,14 @@
       }
     }
 
+    function disableControls() {
+      saveDefaultBtn.disabled = true;
+      minusBtn.disabled = true;
+      plusBtn.disabled = true;
+      closeBtn.disabled = true;
+      if (installBtn) installBtn.disabled = true;
+    }
+
     function vibrate(pattern) {
       if (navigator.vibrate) {
         navigator.vibrate(pattern);
@@ -263,7 +280,9 @@
 
         if (remainingSeconds <= 0) {
           clearInterval(intervalId);
+          timerEnded = true;
           statusEl.textContent = 'נגמר';
+          disableControls();
           playEndSequence();
 
           setTimeout(() => {
@@ -283,11 +302,13 @@
     }
 
     plusBtn.addEventListener('click', () => {
+      if (timerEnded) return;
       selectedSeconds += STEP_SECONDS;
       startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
+      if (timerEnded) return;
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
       startTimer(false);
     });
