@@ -114,6 +114,7 @@
 <body>
   <main class="app">
     <div id="status" class="status"></div>
+    <button id="saveDefaultBtn" class="install" style="display:none;"></button>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
@@ -155,6 +156,7 @@
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
+    const saveDefaultBtn = document.getElementById('saveDefaultBtn');
     const startBtn = document.getElementById('startBtn');
     const minusBtn = document.getElementById('minusBtn');
     const plusBtn = document.getElementById('plusBtn');
@@ -181,6 +183,16 @@
         minusBtn.style.display = 'none';
         startBtn.style.display = 'inline-flex';
       }
+    }
+
+    function updateSaveButtonLabel() {
+      saveDefaultBtn.textContent = `קבע ${formatTime(selectedSeconds)} כברירת מחדל`;
+    }
+
+    function updateSaveButtonVisibility() {
+      const show = selectedSeconds !== defaultSeconds;
+      saveDefaultBtn.style.display = show ? 'block' : 'none';
+      if (show) updateSaveButtonLabel();
     }
 
     function getAudioContext() {
@@ -243,6 +255,7 @@
       updateDisplay();
       statusEl.textContent = '';
       setButtonsState(true);
+      updateSaveButtonVisibility();
 
       if (playSound) {
         playGling('start');
@@ -280,13 +293,23 @@
     plusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds += STEP_SECONDS;
+      updateSaveButtonVisibility();
       startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
+      updateSaveButtonVisibility();
       startTimer(false);
+    });
+
+    saveDefaultBtn.addEventListener('click', () => {
+      defaultSeconds = selectedSeconds;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(defaultSeconds));
+      } catch (e) {}
+      updateSaveButtonVisibility();
     });
 
     startBtn.addEventListener('click', () => {
