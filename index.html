@@ -228,14 +228,14 @@
     }
 
     function playEndSequence() {
-      // Play end sound 3 times with short delays
+      // Play end sound 3 times with consistent spacing
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           playGling('end');
           if (navigator.vibrate) {
             navigator.vibrate([120, 60, 120]);
           }
-        }, i * 700);
+        }, i * 560);
       }
     }
 
