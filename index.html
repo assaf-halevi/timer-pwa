@@ -163,7 +163,7 @@
       return audioContext;
     }
 
-    function playGling(type = 'start') {
+    function playGling(type = 'start', volume = 0.25) {
       try {
         const ctx = getAudioContext();
         if (ctx.state === 'suspended') ctx.resume();
@@ -171,9 +171,14 @@
         const now = ctx.currentTime;
         const gain = ctx.createGain();
         gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+        if (volume <= 0) {
+          gain.gain.setValueAtTime(0, now);
+        } else {
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        }
 
         const notes = type === 'end'
           ? [880, 1174, 1568]
@@ -192,13 +197,13 @@
       }
     }
 
-    function startTimer(playSound = true) {
+    function startTimer(playSound = true, soundVolume = 0.25) {
       clearInterval(intervalId);
       remainingSeconds = selectedSeconds;
       updateDisplay();
-      statusEl.textContent = '';
+      statusEl.textContent = ''; 
 
-      if (playSound) playGling('start');
+      if (playSound) playGling('start', soundVolume);
 
       intervalId = setInterval(() => {
         remainingSeconds -= 1;
@@ -227,12 +232,12 @@
 
     plusBtn.addEventListener('click', () => {
       selectedSeconds += STEP_SECONDS;
-      startTimer(false);
+      startTimer(true, 0);
     });
 
     minusBtn.addEventListener('click', () => {
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
-      startTimer(false);
+      startTimer(true, 0);
     });
 
     closeBtn.addEventListener('click', () => {
