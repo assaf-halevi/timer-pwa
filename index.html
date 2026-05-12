@@ -227,13 +227,22 @@
       }
     }
 
-    function ensureAudioContextActive() {
-      try {
-        const ctx = getAudioContext();
-        if (ctx.state === 'suspended') {
-          ctx.resume().catch(() => {});
-        }
-      } catch (e) {}
+    function playEndSequence() {
+      // Play end sound 3 times with short delays
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          playGling('end');
+          if (navigator.vibrate) {
+            navigator.vibrate([30, 50]);
+          }
+        }, i * 600);
+      }
+    }
+
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
     }
 
     function startTimer(playSound = true) {
@@ -243,7 +252,10 @@
       statusEl.textContent = '';
       updateSaveButtonVisibility();
 
-      if (playSound) playGling('start');
+      if (playSound) {
+        playGling('start');
+        vibrate(100);
+      }
 
       intervalId = setInterval(() => {
         remainingSeconds -= 1;
@@ -252,7 +264,7 @@
         if (remainingSeconds <= 0) {
           clearInterval(intervalId);
           statusEl.textContent = 'נגמר';
-          playGling('end');
+          playEndSequence();
 
           setTimeout(() => {
             try {
@@ -323,9 +335,6 @@
         navigator.serviceWorker.register('./sw.js');
       });
     }
-
-    document.addEventListener('click', ensureAudioContextActive, { once: true });
-    document.addEventListener('touchstart', ensureAudioContextActive, { once: true });
 
     updateDisplay();
     window.addEventListener('load', () => startTimer(true));
