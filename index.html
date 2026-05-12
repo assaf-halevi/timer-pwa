@@ -112,6 +112,7 @@
 <body>
   <main class="app">
     <div id="status" class="status">מתחיל עכשיו</div>
+    <button id="saveDefaultBtn" class="install" style="display:none; margin-bottom:12px;">שמירה כברירת מחדל</button>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
@@ -131,15 +132,31 @@
     const DEFAULT_SECONDS = 5 * 60;
     const STEP_SECONDS = 30;
     const MIN_SECONDS = 30;
+    const STORAGE_KEY = 'timer-default-seconds';
 
-    let selectedSeconds = DEFAULT_SECONDS;
-    let remainingSeconds = DEFAULT_SECONDS;
+    function loadDefaultSeconds() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const value = stored !== null ? parseInt(stored, 10) : NaN;
+        if (!Number.isNaN(value)) {
+          return Math.max(MIN_SECONDS, value);
+        }
+      } catch (e) {
+        // localStorage may be unavailable in some environments.
+      }
+      return DEFAULT_SECONDS;
+    }
+
+    let defaultSeconds = loadDefaultSeconds();
+    let selectedSeconds = defaultSeconds;
+    let remainingSeconds = defaultSeconds;
     let intervalId = null;
     let audioContext = null;
     let deferredInstallPrompt = null;
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
+    const saveDefaultBtn = document.getElementById('saveDefaultBtn');
     const minusBtn = document.getElementById('minusBtn');
     const plusBtn = document.getElementById('plusBtn');
     const closeBtn = document.getElementById('closeBtn');
@@ -153,6 +170,10 @@
 
     function updateDisplay() {
       timerEl.textContent = formatTime(remainingSeconds);
+    }
+
+    function updateSaveButtonVisibility() {
+      saveDefaultBtn.style.display = selectedSeconds === defaultSeconds ? 'none' : 'block';
     }
 
     function getAudioContext() {
@@ -196,6 +217,7 @@
       remainingSeconds = selectedSeconds;
       updateDisplay();
       statusEl.textContent = '';
+      updateSaveButtonVisibility();
 
       if (playSound) playGling('start');
 
@@ -232,6 +254,16 @@
     minusBtn.addEventListener('click', () => {
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
       startTimer(false);
+    });
+
+    saveDefaultBtn.addEventListener('click', () => {
+      defaultSeconds = selectedSeconds;
+      try {
+        localStorage.setItem(STORAGE_KEY, String(defaultSeconds));
+      } catch (e) {
+        // Ignore storage failures.
+      }
+      updateSaveButtonVisibility();
     });
 
     closeBtn.addEventListener('click', () => {
