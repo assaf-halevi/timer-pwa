@@ -46,20 +46,6 @@
       position: relative;
     }
 
-    #saveDefaultBtn {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      top: 20px;
-      width: auto;
-      padding: 10px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      border-radius: 16px;
-      margin: 0;
-      white-space: nowrap;
-    }
-
     h1 {
       margin: 0 0 10px;
       font-size: 24px;
@@ -83,9 +69,10 @@
     }
 
     .controls {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      justify-content: center;
       gap: 12px;
+      flex-wrap: wrap;
       margin-bottom: 12px;
     }
 
@@ -126,21 +113,17 @@
 </head>
 <body>
   <main class="app">
-    <div id="status" class="status">מתחיל עכשיו</div>
-    <button id="saveDefaultBtn" class="install" style="display:none;"></button>
+    <div id="status" class="status"></div>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
       <button id="minusBtn">− 30 שנ׳</button>
       <button id="plusBtn">+ 30 שנ׳</button>
+      <button id="startBtn" style="display:none;">התחל מחדש</button>
     </div>
 
     <button id="closeBtn" class="close">סגור עכשיו</button>
     <button id="installBtn" class="install">התקן כאפליקציה</button>
-
-    <div class="hint">
-      אין Pause. שינוי הזמן מפעיל את הטיימר מחדש לפי הזמן החדש.
-    </div>
   </main>
 
   <script>
@@ -172,13 +155,11 @@
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
-    const saveDefaultBtn = document.getElementById('saveDefaultBtn');
+    const startBtn = document.getElementById('startBtn');
     const minusBtn = document.getElementById('minusBtn');
     const plusBtn = document.getElementById('plusBtn');
     const closeBtn = document.getElementById('closeBtn');
     const installBtn = document.getElementById('installBtn');
-
-    let closeTimeoutId = null;
 
     function formatTime(totalSeconds) {
       const minutes = Math.floor(totalSeconds / 60);
@@ -190,14 +171,16 @@
       timerEl.textContent = formatTime(remainingSeconds);
     }
 
-    function updateSaveButtonLabel() {
-      saveDefaultBtn.textContent = `קבע ${formatTime(selectedSeconds)} כברירת מחדל`;
-    }
-
-    function updateSaveButtonVisibility() {
-      const show = selectedSeconds !== defaultSeconds;
-      saveDefaultBtn.style.display = show ? 'block' : 'none';
-      updateSaveButtonLabel();
+    function setButtonsState(running) {
+      if (running) {
+        plusBtn.style.display = 'inline-flex';
+        minusBtn.style.display = 'inline-flex';
+        startBtn.style.display = 'none';
+      } else {
+        plusBtn.style.display = 'none';
+        minusBtn.style.display = 'none';
+        startBtn.style.display = 'inline-flex';
+      }
     }
 
     function getAudioContext() {
@@ -237,7 +220,6 @@
     }
 
     function playEndSequence() {
-      // Play end sound 3 times with consistent spacing
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           playGling('end');
@@ -248,45 +230,19 @@
       }
     }
 
-    function disableControls() {
-      saveDefaultBtn.disabled = true;
-      minusBtn.disabled = true;
-      plusBtn.disabled = true;
-      closeBtn.disabled = true;
-      if (installBtn) installBtn.disabled = true;
-    }
-
-    function scheduleClose() {
-      const timeToClose = (intervalId ? remainingSeconds : selectedSeconds) * 1000 + 3000; // milliseconds + 3 seconds for sounds
-      clearTimeout(closeTimeoutId);
-      closeTimeoutId = setTimeout(() => {
-        try {
-          window.close();
-        } catch (e) {}
-        // If close fails, show final message
-        document.body.innerHTML = `
-          <main class="app">
-            <h1>האפליקציה נסגרה</h1>
-            <div class="status">אפשר לסגור את החלון.</div>
-          </main>
-        `;
-      }, timeToClose);
-      statusEl.textContent = `יסגר בעוד ${Math.ceil(timeToClose / 1000)} שניות`;
-    }
-
-    function cancelScheduledClose() {
-      clearTimeout(closeTimeoutId);
-      closeTimeoutId = null;
-      statusEl.textContent = '';
+    function vibrate(pattern) {
+      if (navigator.vibrate) {
+        navigator.vibrate(pattern);
+      }
     }
 
     function startTimer(playSound = true) {
+      timerEnded = false;
       clearInterval(intervalId);
-      cancelScheduledClose();
       remainingSeconds = selectedSeconds;
       updateDisplay();
       statusEl.textContent = '';
-      updateSaveButtonVisibility();
+      setButtonsState(true);
 
       if (playSound) {
         playGling('start');
@@ -295,13 +251,14 @@
 
       intervalId = setInterval(() => {
         remainingSeconds -= 1;
+        if (remainingSeconds < 0) remainingSeconds = 0;
         updateDisplay();
 
         if (remainingSeconds <= 0) {
           clearInterval(intervalId);
           timerEnded = true;
           statusEl.textContent = 'נגמר';
-          disableControls();
+          setButtonsState(false);
           playEndSequence();
 
           setTimeout(() => {
@@ -323,29 +280,21 @@
     plusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds += STEP_SECONDS;
-      updateSaveButtonLabel();
       startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
-      updateSaveButtonLabel();
       startTimer(false);
     });
 
-    timerEl.addEventListener('click', () => {
-      if (timerEnded) return;
-      if (closeTimeoutId) {
-        cancelScheduledClose();
-      } else {
-        scheduleClose();
-      }
+    startBtn.addEventListener('click', () => {
+      startTimer(true);
     });
 
     closeBtn.addEventListener('click', () => {
       clearInterval(intervalId);
-      cancelScheduledClose();
       try {
         window.close();
       } catch (e) {}
@@ -379,7 +328,6 @@
     }
 
     updateDisplay();
-    updateSaveButtonLabel();
     window.addEventListener('load', () => startTimer(true));
   </script>
 </body>
