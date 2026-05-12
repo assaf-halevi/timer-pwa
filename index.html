@@ -43,6 +43,21 @@
       padding: 28px;
       box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
       text-align: center;
+      position: relative;
+    }
+
+    #saveDefaultBtn {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 20px;
+      width: auto;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 16px;
+      margin: 0;
+      max-width: 90%;
     }
 
     h1 {
@@ -112,7 +127,7 @@
 <body>
   <main class="app">
     <div id="status" class="status">מתחיל עכשיו</div>
-    <button id="saveDefaultBtn" class="install" style="display:none; margin-bottom:12px;">שמירה כברירת מחדל</button>
+    <button id="saveDefaultBtn" class="install" style="display:none;">שמירה כברירת מחדל</button>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
