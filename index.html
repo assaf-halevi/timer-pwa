@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
-  <title>טיימר 5 דקות</title>
+  <title>טיימר פשוט ונחמד</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <style>
@@ -111,7 +111,7 @@
 </head>
 <body>
   <main class="app">
-    <h1>טיימר פשוט</h1>
+    <h1>טיימר פשוט ונחמד</h1>
     <div id="status" class="status">מתחיל עכשיו</div>
     <div id="timer" class="timer">05:00</div>
 
@@ -227,12 +227,12 @@
 
     plusBtn.addEventListener('click', () => {
       selectedSeconds += STEP_SECONDS;
-      startTimer(true);
+      startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
-      startTimer(true);
+      startTimer(false);
     });
 
     closeBtn.addEventListener('click', () => {
