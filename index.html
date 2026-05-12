@@ -170,6 +170,8 @@
     let deferredInstallPrompt = null;
     let timerEnded = false;
     let endTime = null;
+    let wakeLock = null;
+    let endTime = null;
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
@@ -259,15 +261,55 @@
       }
     }
 
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => {
+          wakeLock = null;
+        });
+      } catch (e) {
+        wakeLock = null;
+      }
+    }
+
+    function releaseWakeLock() {
+      if (!wakeLock) return;
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+
+    async function ensureNotificationPermission() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+    }
+
+    function sendTimerNotification() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+      try {
+        new Notification('הטיימר הסתיים', {
+          body: 'הטיימר הגיע ל-00:00',
+          silent: false,
+        });
+      } catch (e) {
+        // Ignore notification failures.
+      }
+    }
+
     function vibrate(pattern) {
       if (navigator.vibrate) {
         navigator.vibrate(pattern);
       }
     }
 
-    function startTimer(playSound = true) {
+    async async function startTimer(playSound = true) {
       timerEnded = false;
       clearInterval(intervalId);
+      await requestWakeLock();
+      await ensureNotificationPermission();
       endTime = Date.now() + selectedSeconds * 1000;
       remainingSeconds = selectedSeconds;
       updateDisplay();
@@ -290,6 +332,8 @@
           statusEl.textContent = 'נגמר';
           setButtonsState(false);
           playEndSequence();
+          releaseWakeLock();
+          sendTimerNotification();
 
           setTimeout(() => {
             try {
@@ -335,6 +379,7 @@
 
     closeBtn.addEventListener('click', () => {
       clearInterval(intervalId);
+      releaseWakeLock();
       try {
         window.close();
       } catch (e) {}
