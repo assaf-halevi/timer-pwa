@@ -195,9 +195,7 @@
     function updateSaveButtonVisibility() {
       const show = selectedSeconds !== defaultSeconds;
       saveDefaultBtn.style.display = show ? 'block' : 'none';
-      if (show) {
-        updateSaveButtonLabel();
-      }
+      updateSaveButtonLabel();
     }
 
     function getAudioContext() {
@@ -304,12 +302,14 @@
     plusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds += STEP_SECONDS;
+      updateSaveButtonLabel();
       startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
       if (timerEnded) return;
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
+      updateSaveButtonLabel();
       startTimer(false);
     });
 
