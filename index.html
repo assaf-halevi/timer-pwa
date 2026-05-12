@@ -227,6 +227,15 @@
       }
     }
 
+    function ensureAudioContextActive() {
+      try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      } catch (e) {}
+    }
+
     function startTimer(playSound = true) {
       clearInterval(intervalId);
       remainingSeconds = selectedSeconds;
@@ -314,6 +323,9 @@
         navigator.serviceWorker.register('./sw.js');
       });
     }
+
+    document.addEventListener('click', ensureAudioContextActive, { once: true });
+    document.addEventListener('touchstart', ensureAudioContextActive, { once: true });
 
     updateDisplay();
     window.addEventListener('load', () => startTimer(true));
