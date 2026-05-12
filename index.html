@@ -178,6 +178,8 @@
     const closeBtn = document.getElementById('closeBtn');
     const installBtn = document.getElementById('installBtn');
 
+    let closeTimeoutId = null;
+
     function formatTime(totalSeconds) {
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
@@ -254,14 +256,33 @@
       if (installBtn) installBtn.disabled = true;
     }
 
-    function vibrate(pattern) {
-      if (navigator.vibrate) {
-        navigator.vibrate(pattern);
-      }
+    function scheduleClose() {
+      const timeToClose = (intervalId ? remainingSeconds : selectedSeconds) * 1000 + 3000; // milliseconds + 3 seconds for sounds
+      clearTimeout(closeTimeoutId);
+      closeTimeoutId = setTimeout(() => {
+        try {
+          window.close();
+        } catch (e) {}
+        // If close fails, show final message
+        document.body.innerHTML = `
+          <main class="app">
+            <h1>האפליקציה נסגרה</h1>
+            <div class="status">אפשר לסגור את החלון.</div>
+          </main>
+        `;
+      }, timeToClose);
+      statusEl.textContent = `יסגר בעוד ${Math.ceil(timeToClose / 1000)} שניות`;
+    }
+
+    function cancelScheduledClose() {
+      clearTimeout(closeTimeoutId);
+      closeTimeoutId = null;
+      statusEl.textContent = '';
     }
 
     function startTimer(playSound = true) {
       clearInterval(intervalId);
+      cancelScheduledClose();
       remainingSeconds = selectedSeconds;
       updateDisplay();
       statusEl.textContent = '';
@@ -313,18 +334,18 @@
       startTimer(false);
     });
 
-    saveDefaultBtn.addEventListener('click', () => {
-      defaultSeconds = selectedSeconds;
-      try {
-        localStorage.setItem(STORAGE_KEY, String(defaultSeconds));
-      } catch (e) {
-        // Ignore storage failures.
+    timerEl.addEventListener('click', () => {
+      if (timerEnded) return;
+      if (closeTimeoutId) {
+        cancelScheduledClose();
+      } else {
+        scheduleClose();
       }
-      updateSaveButtonVisibility();
     });
 
     closeBtn.addEventListener('click', () => {
       clearInterval(intervalId);
+      cancelScheduledClose();
       try {
         window.close();
       } catch (e) {}
