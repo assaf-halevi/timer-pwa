@@ -111,8 +111,8 @@
 </head>
 <body>
   <main class="app">
-    <h1></h1>
-    <div id="status" class="status"></div>
+    <h1>טיימר פשוט</h1>
+    <div id="status" class="status">מתחיל עכשיו</div>
     <div id="timer" class="timer">05:00</div>
 
     <div class="controls">
@@ -163,7 +163,7 @@
       return audioContext;
     }
 
-    function playGling(type = 'start', volume = 0.25) {
+    function playGling(type = 'start') {
       try {
         const ctx = getAudioContext();
         if (ctx.state === 'suspended') ctx.resume();
@@ -172,7 +172,7 @@
         const gain = ctx.createGain();
         gain.connect(ctx.destination);
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(volume, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
 
         const notes = type === 'end'
@@ -192,13 +192,13 @@
       }
     }
 
-    function startTimer(playSound = true, soundVolume = 0.25) {
+    function startTimer(playSound = true) {
       clearInterval(intervalId);
       remainingSeconds = selectedSeconds;
       updateDisplay();
-      statusEl.textContent = '';
+      statusEl.textContent = 'הטיימר רץ';
 
-      if (playSound) playGling('start', soundVolume);
+      if (playSound) playGling('start');
 
       intervalId = setInterval(() => {
         remainingSeconds -= 1;
@@ -227,12 +227,12 @@
 
     plusBtn.addEventListener('click', () => {
       selectedSeconds += STEP_SECONDS;
-      startTimer(true, 0.002);
+      startTimer(false);
     });
 
     minusBtn.addEventListener('click', () => {
       selectedSeconds = Math.max(MIN_SECONDS, selectedSeconds - STEP_SECONDS);
-      startTimer(true, 0.002);
+      startTimer(false);
     });
 
     closeBtn.addEventListener('click', () => {
