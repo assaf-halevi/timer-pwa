@@ -171,7 +171,6 @@
     let timerEnded = false;
     let endTime = null;
     let wakeLock = null;
-    let endTime = null;
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
@@ -305,7 +304,7 @@
       }
     }
 
-    async async function startTimer(playSound = true) {
+    async function startTimer(playSound = true) {
       timerEnded = false;
       clearInterval(intervalId);
       await requestWakeLock();
