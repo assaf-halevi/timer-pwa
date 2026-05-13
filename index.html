@@ -148,6 +148,7 @@
     const STEP_SECONDS = 30;
     const MIN_SECONDS = 30;
     const STORAGE_KEY = 'timer-default-seconds';
+    const ACTIVE_TIMER_KEY = 'timer-active-end-time';
 
     function loadDefaultSeconds() {
       try {
@@ -171,6 +172,8 @@
     let timerEnded = false;
     let endTime = null;
     let wakeLock = null;
+    let isRunning = false;
+    let completionHandled = false;
 
     const timerEl = document.getElementById('timer');
     const statusEl = document.getElementById('status');
@@ -211,6 +214,21 @@
       const show = selectedSeconds !== defaultSeconds;
       saveDefaultBtn.style.display = show ? 'block' : 'none';
       if (show) updateSaveButtonLabel();
+    }
+
+    function saveActiveTimer() {
+      try {
+        localStorage.setItem(ACTIVE_TIMER_KEY, JSON.stringify({
+          endTime,
+          selectedSeconds,
+        }));
+      } catch (e) {}
+    }
+
+    function clearActiveTimer() {
+      try {
+        localStorage.removeItem(ACTIVE_TIMER_KEY);
+      } catch (e) {}
     }
 
     function getAudioContext() {
@@ -261,11 +279,15 @@
     }
 
     async function requestWakeLock() {
-      if (!('wakeLock' in navigator)) return;
+      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
       try {
+        if (wakeLock) return;
         wakeLock = await navigator.wakeLock.request('screen');
         wakeLock.addEventListener('release', () => {
           wakeLock = null;
+          if (isRunning && !timerEnded && document.visibilityState === 'visible') {
+            setTimeout(requestWakeLock, 250);
+          }
         });
       } catch (e) {
         wakeLock = null;
@@ -297,12 +319,53 @@
       }
     }
 
+    function tickTimer() {
+      remainingSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      updateDisplay();
+
+      if (remainingSeconds <= 0) {
+        completeTimer();
+      }
+    }
+
+    function completeTimer() {
+      if (completionHandled) return;
+      completionHandled = true;
+      isRunning = false;
+      clearInterval(intervalId);
+      clearActiveTimer();
+      timerEnded = true;
+      remainingSeconds = 0;
+      updateDisplay();
+      statusEl.textContent = 'נגמר';
+      setButtonsState(false);
+      playEndSequence();
+      releaseWakeLock();
+      sendTimerNotification();
+
+      setTimeout(() => {
+        try {
+          window.close();
+        } catch (e) {}
+
+        document.body.innerHTML = `
+          <main class="app">
+            <h1>הטיימר הסתיים</h1>
+            <div class="status">אפשר לסגור את החלון.</div>
+          </main>
+        `;
+      }, 2400);
+    }
+
     function startTimer(playSound = true) {
       timerEnded = false;
+      completionHandled = false;
+      isRunning = true;
       clearInterval(intervalId);
       requestWakeLock();
       endTime = Date.now() + selectedSeconds * 1000;
       remainingSeconds = selectedSeconds;
+      saveActiveTimer();
       updateDisplay();
       statusEl.textContent = '';
       setButtonsState(true);
@@ -314,10 +377,9 @@
       }
 
       intervalId = setInterval(() => {
-        remainingSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        updateDisplay();
+        tickTimer();
 
-        if (remainingSeconds <= 0) {
+        if (false && remainingSeconds <= 0) {
           clearInterval(intervalId);
           timerEnded = true;
           statusEl.textContent = 'נגמר';
@@ -369,6 +431,8 @@
     });
 
     closeBtn.addEventListener('click', () => {
+      isRunning = false;
+      clearActiveTimer();
       clearInterval(intervalId);
       releaseWakeLock();
       try {
@@ -403,8 +467,66 @@
       });
     }
 
+    function syncRunningTimer() {
+      if (!isRunning || timerEnded) return;
+      requestWakeLock();
+      tickTimer();
+    }
+
+    function restoreActiveTimer() {
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem(ACTIVE_TIMER_KEY));
+      } catch (e) {}
+
+      if (!saved || typeof saved.endTime !== 'number') return false;
+
+      endTime = saved.endTime;
+      selectedSeconds = Math.max(MIN_SECONDS, Number(saved.selectedSeconds) || defaultSeconds);
+      remainingSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      timerEnded = false;
+      completionHandled = false;
+      isRunning = true;
+      updateDisplay();
+      statusEl.textContent = '';
+      setButtonsState(true);
+      updateSaveButtonVisibility();
+      requestWakeLock();
+
+      if (remainingSeconds <= 0) {
+        completeTimer();
+      } else {
+        clearInterval(intervalId);
+        intervalId = setInterval(() => {
+          tickTimer();
+        }, 100);
+      }
+
+      return true;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncRunningTimer();
+      }
+    });
+
+    window.addEventListener('pageshow', syncRunningTimer);
+    window.addEventListener('focus', syncRunningTimer);
+
+    ['click', 'touchstart'].forEach((eventName) => {
+      window.addEventListener(eventName, () => {
+        if (!isRunning || timerEnded) return;
+        requestWakeLock();
+      }, { passive: true });
+    });
+
     updateDisplay();
-    window.addEventListener('load', () => startTimer(true));
+    window.addEventListener('load', () => {
+      if (!restoreActiveTimer()) {
+        startTimer(true);
+      }
+    });
   </script>
 </body>
 </html>
