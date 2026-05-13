@@ -119,6 +119,14 @@
       display: none;
     }
 
+    .notification {
+      width: 100%;
+      background: var(--accent);
+      color: #052e16;
+      margin-top: 12px;
+      display: none;
+    }
+
     .hint {
       margin-top: 18px;
       color: var(--muted);
@@ -141,6 +149,7 @@
 
     <button id="closeBtn" class="close">סגור עכשיו</button>
     <button id="installBtn" class="install">התקן כאפליקציה</button>
+    <button id="notificationBtn" class="notification">אפשר התראות לצלצול אמין יותר</button>
   </main>
 
   <script>
@@ -168,6 +177,8 @@
     let remainingSeconds = defaultSeconds;
     let intervalId = null;
     let audioContext = null;
+    let keepAliveOscillator = null;
+    let keepAliveGain = null;
     let deferredInstallPrompt = null;
     let timerEnded = false;
     let endTime = null;
@@ -182,6 +193,7 @@
     const minusBtn = document.getElementById('minusBtn');
     const plusBtn = document.getElementById('plusBtn');
     const closeBtn = document.getElementById('closeBtn');
+    const notificationBtn = document.getElementById('notificationBtn');
     const installBtn = document.getElementById('installBtn');
 
     function formatTime(totalSeconds) {
@@ -231,11 +243,60 @@
       } catch (e) {}
     }
 
+    function updateNotificationButton() {
+      if (!('Notification' in window) || !notificationBtn) return;
+      notificationBtn.style.display = Notification.permission === 'default' ? 'block' : 'none';
+    }
+
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) return;
+      try {
+        await Notification.requestPermission();
+      } catch (e) {}
+      updateNotificationButton();
+    }
+
     function getAudioContext() {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
       return audioContext;
+    }
+
+    function startKeepAliveAudio() {
+      try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        if (keepAliveOscillator) return;
+
+        keepAliveGain = ctx.createGain();
+        keepAliveGain.gain.setValueAtTime(0.00001, ctx.currentTime);
+        keepAliveGain.connect(ctx.destination);
+
+        keepAliveOscillator = ctx.createOscillator();
+        keepAliveOscillator.type = 'sine';
+        keepAliveOscillator.frequency.setValueAtTime(20, ctx.currentTime);
+        keepAliveOscillator.connect(keepAliveGain);
+        keepAliveOscillator.start();
+      } catch (e) {
+        keepAliveOscillator = null;
+        keepAliveGain = null;
+      }
+    }
+
+    function stopKeepAliveAudio() {
+      try {
+        if (keepAliveOscillator) {
+          keepAliveOscillator.stop();
+          keepAliveOscillator.disconnect();
+        }
+        if (keepAliveGain) {
+          keepAliveGain.disconnect();
+        }
+      } catch (e) {}
+
+      keepAliveOscillator = null;
+      keepAliveGain = null;
     }
 
     function playGling(type = 'start') {
@@ -339,6 +400,7 @@
       updateDisplay();
       statusEl.textContent = 'נגמר';
       setButtonsState(false);
+      stopKeepAliveAudio();
       playEndSequence();
       releaseWakeLock();
       sendTimerNotification();
@@ -363,6 +425,7 @@
       isRunning = true;
       clearInterval(intervalId);
       requestWakeLock();
+      startKeepAliveAudio();
       endTime = Date.now() + selectedSeconds * 1000;
       remainingSeconds = selectedSeconds;
       saveActiveTimer();
@@ -430,10 +493,15 @@
       startTimer(true);
     });
 
+    notificationBtn.addEventListener('click', () => {
+      requestNotificationPermission();
+    });
+
     closeBtn.addEventListener('click', () => {
       isRunning = false;
       clearActiveTimer();
       clearInterval(intervalId);
+      stopKeepAliveAudio();
       releaseWakeLock();
       try {
         window.close();
@@ -470,6 +538,7 @@
     function syncRunningTimer() {
       if (!isRunning || timerEnded) return;
       requestWakeLock();
+      startKeepAliveAudio();
       tickTimer();
     }
 
@@ -492,6 +561,7 @@
       setButtonsState(true);
       updateSaveButtonVisibility();
       requestWakeLock();
+      startKeepAliveAudio();
 
       if (remainingSeconds <= 0) {
         completeTimer();
@@ -518,11 +588,15 @@
       window.addEventListener(eventName, () => {
         if (!isRunning || timerEnded) return;
         requestWakeLock();
+        startKeepAliveAudio();
+        updateNotificationButton();
       }, { passive: true });
     });
 
     updateDisplay();
+    updateNotificationButton();
     window.addEventListener('load', () => {
+      updateNotificationButton();
       if (!restoreActiveTimer()) {
         startTimer(true);
       }
