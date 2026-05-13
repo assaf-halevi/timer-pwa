@@ -278,13 +278,6 @@
       wakeLock = null;
     }
 
-    async function ensureNotificationPermission() {
-      if (!('Notification' in window)) return;
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission();
-      }
-    }
-
     function sendTimerNotification() {
       if (!('Notification' in window)) return;
       if (Notification.permission !== 'granted') return;
@@ -304,11 +297,10 @@
       }
     }
 
-    async function startTimer(playSound = true) {
+    function startTimer(playSound = true) {
       timerEnded = false;
       clearInterval(intervalId);
-      await requestWakeLock();
-      await ensureNotificationPermission();
+      requestWakeLock();
       endTime = Date.now() + selectedSeconds * 1000;
       remainingSeconds = selectedSeconds;
       updateDisplay();
